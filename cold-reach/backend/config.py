@@ -31,5 +31,11 @@ class Settings:
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./coldreach.db")
+    
+    # Google Sheets Settings
+    # Path to service account credentials JSON file
+    GOOGLE_SHEETS_CREDENTIALS_PATH: str = os.getenv("GOOGLE_SHEETS_CREDENTIALS_PATH", "")
+    # Or provide credentials as JSON string (for production)
+    GOOGLE_SHEETS_CREDENTIALS_JSON: str = os.getenv("GOOGLE_SHEETS_CREDENTIALS_JSON", "")
 
 settings = Settings()

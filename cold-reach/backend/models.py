@@ -66,3 +66,31 @@ class OAuthState(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
     is_used = Column(Boolean, default=False)
+
+
+class GoogleSheet(Base):
+    """Store connected Google Sheets for campaign data"""
+    __tablename__ = "google_sheets"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Sheet info
+    name = Column(String(255), nullable=False)
+    sheet_id = Column(String(255), nullable=False)  # Extracted from URL
+    sheet_url = Column(String(500), nullable=False)
+    worksheet_name = Column(String(255), default="Sheet1")  # Which tab to use
+    
+    # Column mappings (JSON stored as text)
+    column_mapping = Column(Text, nullable=True)  # Maps sheet columns to campaign fields
+    
+    # Status
+    is_active = Column(Boolean, default=True)
+    last_synced = Column(DateTime, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", backref="google_sheets")

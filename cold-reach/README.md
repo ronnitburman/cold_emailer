@@ -10,6 +10,7 @@ ColdReach is a modern cold email campaign manager with a Next.js frontend and Py
 - [Project Structure](#project-structure)
 - [Quick Start](#quick-start)
 - [Authentication Setup](#authentication-setup)
+- [Google Sheets Integration](#google-sheets-integration)
 - [User Guide](#user-guide)
 - [API Documentation](#api-documentation)
 - [Tech Stack](#tech-stack)
@@ -47,6 +48,8 @@ cold-reach/
 │   │   ├── jwt.py          # JWT token handling
 │   │   ├── oauth.py        # Google & Apple OAuth
 │   │   └── utils.py        # Utility functions
+│   ├── services/           # External service integrations
+│   │   └── google_sheets.py # Google Sheets API service
 │   └── routes/             # API route handlers
 ├── docs/                   # Documentation
 └── public/                 # Static assets
@@ -152,6 +155,98 @@ JWT_SECRET_KEY=your-generated-secret
 
 ---
 
+## Google Sheets Integration
+
+ColdReach can import campaign data directly from Google Sheets, allowing you to manage campaigns in a familiar spreadsheet interface.
+
+### Setting Up Google Sheets API
+
+#### 1. Create a Service Account
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project (or create a new one)
+3. Navigate to **IAM & Admin** → **Service Accounts**
+4. Click **Create Service Account**
+5. Name it (e.g., "coldreach-sheets") and click **Create**
+6. Skip the optional permissions and click **Done**
+
+#### 2. Create and Download Credentials
+
+1. Click on your new service account
+2. Go to the **Keys** tab
+3. Click **Add Key** → **Create new key**
+4. Select **JSON** and click **Create**
+5. Save the downloaded file as `google-sheets-credentials.json` in the `backend/` folder
+
+#### 3. Enable Required APIs
+
+1. Go to **APIs & Services** → **Library**
+2. Search for and enable:
+   - **Google Sheets API**
+   - **Google Drive API**
+
+#### 4. Configure Environment
+
+Add to `backend/.env`:
+
+```env
+# Option 1: Path to credentials file (recommended for development)
+GOOGLE_SHEETS_CREDENTIALS_PATH=./google-sheets-credentials.json
+
+# Option 2: JSON string (for production/Docker)
+# GOOGLE_SHEETS_CREDENTIALS_JSON={"type": "service_account", ...}
+```
+
+### Connecting a Google Sheet
+
+#### 1. Share Your Sheet
+
+1. Open your Google Sheet
+2. Click the **Share** button
+3. Add the service account email (found in the JSON file as `client_email`)
+4. Give it **Viewer** access (or Editor if you want write access later)
+
+#### 2. Connect in ColdReach
+
+1. Go to **Settings** → **Integrations**
+2. Click **Add Sheet**
+3. Paste your Google Sheet URL
+4. Click **Validate** to verify access
+5. Give it a display name
+6. Select the worksheet tab to use
+7. Click **Connect Sheet**
+
+### Sheet Format
+
+Your Google Sheet should have headers in the first row. ColdReach auto-detects these columns:
+
+| Column Name | Description | Example |
+|-------------|-------------|---------|
+| Name / Campaign Name | Campaign name | "Q1 Outreach" |
+| Status | Campaign status | "Active", "Paused", "Draft" |
+| Sent | Emails sent count | "1,250" |
+| Open Rate | Email open rate | "72.4%" |
+| Reply Rate | Reply rate | "11.6%" |
+
+**Example Sheet:**
+
+| Campaign Name | Status | Sent | Open Rate | Reply Rate |
+|---------------|--------|------|-----------|------------|
+| Q1 Product Launch | Active | 1,250 | 71.2% | 11.6% |
+| Enterprise Outreach | Active | 850 | 72.0% | 11.5% |
+| Follow-up Series | Paused | 420 | 68.8% | 12.4% |
+
+### Managing Connected Sheets
+
+In **Settings** → **Integrations**, you can:
+
+- **View** all connected sheets
+- **Sync** to refresh data from a sheet
+- **Open** the sheet in Google Sheets
+- **Remove** a connected sheet
+
+---
+
 ## User Guide
 
 ### Navigation Overview
@@ -162,6 +257,7 @@ JWT_SECRET_KEY=your-generated-secret
 | Dashboard | `/dashboard` | Main analytics dashboard (requires auth) |
 | Campaigns | `/campaigns` | Campaign management |
 | New Campaign | `/campaigns/new` | Create new campaign wizard |
+| Settings | `/settings` | App settings and integrations |
 
 ### Getting Started as a New User
 
@@ -266,7 +362,20 @@ ColdReach provides robust session security:
 |--------|----------|-------------|
 | `GET` | `/api/stats` | Get dashboard statistics |
 | `GET` | `/api/activities` | Get recent activities |
-| `GET` | `/api/campaigns` | Get all campaigns |
+| `GET` | `/api/campaigns` | Get all campaigns (from sheets or mock) |
+
+### Google Sheets Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/sheets/validate` | Validate a Google Sheet URL |
+| `POST` | `/api/sheets` | Connect a new Google Sheet |
+| `GET` | `/api/sheets` | List all connected sheets |
+| `GET` | `/api/sheets/{id}` | Get a specific sheet |
+| `PUT` | `/api/sheets/{id}` | Update sheet settings |
+| `DELETE` | `/api/sheets/{id}` | Remove a connected sheet |
+| `GET` | `/api/sheets/{id}/campaigns` | Get campaigns from a sheet |
+| `POST` | `/api/sheets/{id}/sync` | Manually sync a sheet |
 
 ### Interactive Documentation
 
@@ -291,6 +400,8 @@ Visit `http://localhost:8000/docs` for Swagger UI with:
 - **SQLite** - Database (development)
 - **Python-Jose** - JWT handling
 - **Pydantic** - Data validation
+- **gspread** - Google Sheets API client
+- **google-api-python-client** - Google APIs
 
 ### Authentication
 - **OAuth 2.0** - Google & Apple Sign-In
@@ -328,6 +439,17 @@ pip install -r backend/requirements.txt
 rm backend/coldreach.db
 # Restart backend - tables will be recreated
 ```
+
+**Google Sheets not connecting:**
+- Verify the sheet is shared with the service account email
+- Check the credentials file path in `.env`
+- Ensure Google Sheets API is enabled in Cloud Console
+- Check the backend logs for detailed error messages
+
+**Campaigns showing "Demo data":**
+- Connect a Google Sheet in Settings → Integrations
+- Make sure the sheet has the correct column headers
+- Click "Sync" to refresh data from the sheet
 
 ---
 

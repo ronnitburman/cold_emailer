@@ -24,8 +24,8 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 # Helper functions
 def create_tokens_for_user(user: User, db: Session, device_info: str = None, ip_address: str = None) -> TokenResponse:
     """Create access and refresh tokens for a user"""
-    access_token = create_access_token({"sub": user.id, "email": user.email})
-    refresh_token = create_refresh_token({"sub": user.id})
+    access_token = create_access_token({"sub": str(user.id), "email": user.email})
+    refresh_token = create_refresh_token({"sub": str(user.id)})
     
     # Store the session
     session = UserSession(
@@ -154,6 +154,10 @@ async def google_auth_callback(
     db: Session = Depends(get_db)
 ):
     """Handle Google OAuth callback"""
+    print(f"\n=== Google Callback ===")
+    print(f"Received state: {request.state}")
+    print(f"Received code: {request.code[:20]}...")
+    
     # Verify state
     oauth_state = db.query(OAuthState).filter(
         OAuthState.state == request.state,
@@ -163,6 +167,12 @@ async def google_auth_callback(
     ).first()
     
     if not oauth_state:
+        # Debug: check why state wasn't found
+        any_state = db.query(OAuthState).filter(OAuthState.state == request.state).first()
+        if any_state:
+            print(f"State found but invalid: provider={any_state.provider}, used={any_state.is_used}, expired={any_state.expires_at < datetime.utcnow()}")
+        else:
+            print(f"State not found in database at all")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired state"
@@ -265,7 +275,7 @@ async def refresh_access_token(
     try:
         # Verify refresh token
         payload = verify_token(request.refresh_token, "refresh")
-        user_id = payload.get("sub")
+        user_id = int(payload.get("sub"))
         
         # Find the session
         refresh_token_hash = hash_token(request.refresh_token)

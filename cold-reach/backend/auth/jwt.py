@@ -63,7 +63,16 @@ def verify_token(token: str, token_type: str = "access") -> Dict[str, Any]:
     )
     
     try:
+        print("\n")
+        print("="*80)
+        print(f"Verifying token: {token}")
+        print(f"settings.JWT_SECRET_KEY: {settings.JWT_SECRET_KEY}")
+        print(f"settings.JWT_ALGORITHM: {settings.JWT_ALGORITHM}")
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        print("\n")
+        print("="*80)
+        print(f"Decoded payload: {payload}")
+        print("="*80)
         
         # Check token type
         if payload.get("type") != token_type:
@@ -75,7 +84,9 @@ def verify_token(token: str, token_type: str = "access") -> Dict[str, Any]:
             
         return payload
         
-    except JWTError:
+    except JWTError as e:
+        print("OOOOOPPPPSSSSIIIIEEEEEE ------ JWTError occurred during token verification")
+        print(f"Error details: {e}")
         raise credentials_exception
 
 
@@ -85,9 +96,15 @@ async def get_current_user(
 ) -> User:
     """Get the current authenticated user from the JWT token"""
     token = credentials.credentials
+    print("\n")
+    print(">"*80)
+    print(f"token: {token}")
+    print(f'credentials: {credentials}')
+
     payload = verify_token(token, "access")
-    
-    user_id = payload.get("sub")
+    print(f'payload: {payload}')
+    print("\n")
+    user_id = int(payload.get("sub"))
     user = db.query(User).filter(User.id == user_id).first()
     
     if user is None:
@@ -103,7 +120,8 @@ async def get_current_user(
             detail="User account is disabled",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+    print(f"Current User fetched: {user}")
+    print("-"*80)
     return user
 
 
