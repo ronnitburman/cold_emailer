@@ -56,6 +56,7 @@ class GoogleOAuth:
     async def get_user_info(self, access_token: str) -> Dict[str, Any]:
         """Get user information from Google"""
         async with httpx.AsyncClient() as client:
+            print("inside get_user_info GoogleOAuth")
             response = await client.get(
                 self.GOOGLE_USERINFO_URL,
                 headers={"Authorization": f"Bearer {access_token}"}

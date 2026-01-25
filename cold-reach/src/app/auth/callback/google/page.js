@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
@@ -9,8 +9,12 @@ export default function GoogleCallbackPage() {
     const searchParams = useSearchParams();
     const { handleOAuthCallback } = useAuth();
     const [error, setError] = useState(null);
+    const hasCalledRef = useRef(false);
 
     useEffect(() => {
+        // Prevent double-call in React Strict Mode
+        if (hasCalledRef.current) return;
+        
         const code = searchParams.get("code");
         const state = searchParams.get("state");
         const errorParam = searchParams.get("error");
@@ -21,11 +25,13 @@ export default function GoogleCallbackPage() {
         }
 
         if (code && state) {
+            hasCalledRef.current = true;
             handleOAuthCallback("google", code, state)
                 .then(() => {
                     router.push("/dashboard");
                 })
                 .catch((err) => {
+                    hasCalledRef.current = false; // Allow retry on error
                     setError(err.message || "Authentication failed");
                 });
         } else {

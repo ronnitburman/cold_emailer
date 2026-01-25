@@ -150,12 +150,19 @@ export function AuthProvider({ children }) {
     const handleOAuthCallback = async (provider, code, state) => {
         const storedState = sessionStorage.getItem("oauth_state");
         
+        console.log("OAuth Callback Debug:");
+        console.log("  Provider:", provider);
+        console.log("  State from URL:", state);
+        console.log("  State from sessionStorage:", storedState);
+        
         // Verify state matches
         if (state !== storedState) {
+            console.error("State mismatch! URL state:", state, "Stored state:", storedState);
             throw new Error("Invalid state - possible CSRF attack");
         }
 
         try {
+            console.log("Sending callback to backend...");
             const response = await fetch(`${API_BASE_URL}/auth/${provider}/callback`, {
                 method: "POST",
                 headers: {
@@ -163,9 +170,12 @@ export function AuthProvider({ children }) {
                 },
                 body: JSON.stringify({ code, state })
             });
+            
+            console.log("Backend response status:", response.status);
 
             if (!response.ok) {
                 const error = await response.json();
+                console.error("Backend error:", error);
                 throw new Error(error.detail || "Authentication failed");
             }
 
