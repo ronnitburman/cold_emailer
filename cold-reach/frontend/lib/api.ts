@@ -1,6 +1,6 @@
 import { Client } from "@/components/clients-tab";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 export const api = {
     getClients: async (search?: string): Promise<Client[]> => {
