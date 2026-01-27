@@ -1,0 +1,310 @@
+openapi: 3.0.3
+info:
+  description: API for Cold Reach email outreach platform
+  title: Cold Reach API
+  version: 1.0.0
+servers:
+- description: Local development server
+  url: http://localhost:8000
+paths:
+  /clients:
+    get:
+      description: Retrieve a list of clients with optional filtering.
+      operationId: getClients
+      parameters:
+      - description: "Search term for name, email, or company"
+        explode: true
+        in: query
+        name: search
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Client'
+                type: array
+          description: Successful response
+      summary: List clients
+    post:
+      description: Manually create a single client.
+      operationId: createClient
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: Client created
+      summary: Create client
+  /clients/import/excel:
+    post:
+      description: Upload an Excel file to bulk import clients.
+      operationId: importClientsExcel
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/importClientsExcel_request'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/importClientsExcel_200_response'
+          description: Clients imported successfully
+      summary: Import clients from Excel
+  /clients/import/google-sheet:
+    post:
+      description: Import clients from a public or shared Google Sheet URL.
+      operationId: importClientsGoogleSheet
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/importClientsGoogleSheet_request'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/importClientsExcel_200_response'
+          description: Clients imported successfully
+      summary: Import clients from Google Sheet
+  /clients/{client_id}:
+    delete:
+      description: Delete a specific client by ID.
+      operationId: deleteClient
+      parameters:
+      - explode: false
+        in: path
+        name: client_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Client deleted successfully
+      summary: Delete client
+  /email/send:
+    post:
+      description: Send an email to a list of clients.
+      operationId: sendEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sendEmail_200_response'
+          description: Emails accepted for delivery
+      summary: Send email
+components:
+  schemas:
+    ClientStatus:
+      default: not_contacted
+      enum:
+      - not_contacted
+      - emailed
+      - replied
+      - follow_up
+      - closed
+      title: ClientStatus
+      type: string
+    ClientCreate:
+      example:
+        name: Sarah Johnson
+        company: TechCorp Inc
+        email: sarah.j@techcorp.com
+        status: null
+        lastContact: 2000-01-23T04:56:07.000+00:00
+      properties:
+        name:
+          example: Sarah Johnson
+          title: name
+          type: string
+        email:
+          example: sarah.j@techcorp.com
+          format: email
+          title: email
+          type: string
+        company:
+          example: TechCorp Inc
+          title: company
+          type: string
+        status:
+          $ref: '#/components/schemas/ClientStatus'
+        lastContact:
+          format: date-time
+          nullable: true
+          title: lastContact
+          type: string
+      required:
+      - email
+      - name
+      title: ClientCreate
+      type: object
+    Client:
+      allOf:
+      - $ref: '#/components/schemas/ClientCreate'
+      - properties:
+          id:
+            example: 123e4567-e89b-12d3-a456-426614174000
+            type: string
+        type: object
+      example:
+        name: Sarah Johnson
+        company: TechCorp Inc
+        id: 123e4567-e89b-12d3-a456-426614174000
+        email: sarah.j@techcorp.com
+        status: null
+        lastContact: 2000-01-23T04:56:07.000+00:00
+      title: Client
+    EmailTemplate:
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+      required:
+      - body
+      - subject
+      type: object
+    EmailAttachment:
+      example:
+        size: size
+        name: name
+        id: id
+      properties:
+        id:
+          title: id
+          type: string
+        name:
+          title: name
+          type: string
+        size:
+          title: size
+          type: string
+      title: EmailAttachment
+      type: object
+    EmailRequest:
+      example:
+        attachments:
+        - size: size
+          name: name
+          id: id
+        - size: size
+          name: name
+          id: id
+        subject: subject
+        recipient_ids:
+        - recipient_ids
+        - recipient_ids
+        template_id: template_id
+        body: body
+      properties:
+        recipient_ids:
+          description: List of Client IDs to send the email to
+          items:
+            type: string
+          title: recipient_ids
+          type: array
+        subject:
+          title: subject
+          type: string
+        body:
+          title: body
+          type: string
+        template_id:
+          nullable: true
+          title: template_id
+          type: string
+        attachments:
+          items:
+            $ref: '#/components/schemas/EmailAttachment'
+          title: attachments
+          type: array
+      required:
+      - body
+      - recipient_ids
+      - subject
+      title: EmailRequest
+      type: object
+    importClientsExcel_request:
+      properties:
+        file:
+          description: "Excel file (.xlsx, .xls)"
+          format: binary
+          type: string
+      type: object
+    importClientsExcel_200_response:
+      example:
+        clients:
+        - name: Sarah Johnson
+          company: TechCorp Inc
+          id: 123e4567-e89b-12d3-a456-426614174000
+          email: sarah.j@techcorp.com
+          status: null
+          lastContact: 2000-01-23T04:56:07.000+00:00
+        - name: Sarah Johnson
+          company: TechCorp Inc
+          id: 123e4567-e89b-12d3-a456-426614174000
+          email: sarah.j@techcorp.com
+          status: null
+          lastContact: 2000-01-23T04:56:07.000+00:00
+        count: 0
+      properties:
+        count:
+          description: Number of clients imported
+          title: count
+          type: integer
+        clients:
+          items:
+            $ref: '#/components/schemas/Client'
+          title: clients
+          type: array
+      title: importClientsExcel_200_response
+      type: object
+    importClientsGoogleSheet_request:
+      properties:
+        url:
+          description: Google Sheet URL
+          title: url
+          type: string
+      title: importClientsGoogleSheet_request
+      type: object
+    sendEmail_200_response:
+      example:
+        success: true
+        sent_count: 0
+      properties:
+        success:
+          title: success
+          type: boolean
+        sent_count:
+          title: sent_count
+          type: integer
+      title: sendEmail_200_response
+      type: object

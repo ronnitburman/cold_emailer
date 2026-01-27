@@ -1,0 +1,238 @@
+openapi: 3.0.3
+info:
+  title: Cold Reach API
+  description: API for Cold Reach email outreach platform
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /clients:
+    get:
+      summary: List clients
+      description: Retrieve a list of clients with optional filtering.
+      operationId: getClients
+      parameters:
+        - name: search
+          in: query
+          description: Search term for name, email, or company
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+    post:
+      summary: Create client
+      description: Manually create a single client.
+      operationId: createClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+      responses:
+        '201':
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+
+  /clients/import/excel:
+    post:
+      summary: Import clients from Excel
+      description: Upload an Excel file to bulk import clients.
+      operationId: importClientsExcel
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Excel file (.xlsx, .xls)
+      responses:
+        '200':
+          description: Clients imported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Number of clients imported
+                  clients:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Client'
+
+  /clients/import/google-sheet:
+    post:
+      summary: Import clients from Google Sheet
+      description: Import clients from a public or shared Google Sheet URL.
+      operationId: importClientsGoogleSheet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  description: Google Sheet URL
+      responses:
+        '200':
+          description: Clients imported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Number of clients imported
+                  clients:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Client'
+
+  /clients/{client_id}:
+    delete:
+      summary: Delete client
+      description: Delete a specific client by ID.
+      operationId: deleteClient
+      parameters:
+        - name: client_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Client deleted successfully
+
+  /email/send:
+    post:
+      summary: Send email
+      description: Send an email to a list of clients.
+      operationId: sendEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '200':
+          description: Emails accepted for delivery
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  sent_count:
+                    type: integer
+
+components:
+  schemas:
+    ClientStatus:
+      type: string
+      enum: [not_contacted, emailed, replied, follow_up, closed]
+      default: not_contacted
+
+    ClientCreate:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          example: "Sarah Johnson"
+        email:
+          type: string
+          format: email
+          example: "sarah.j@techcorp.com"
+        company:
+          type: string
+          example: "TechCorp Inc"
+        status:
+          $ref: '#/components/schemas/ClientStatus'
+        lastContact:
+          type: string
+          format: date-time
+          nullable: true
+
+    Client:
+      allOf:
+        - $ref: '#/components/schemas/ClientCreate'
+        - type: object
+          properties:
+            id:
+              type: string
+              example: "123e4567-e89b-12d3-a456-426614174000"
+
+    EmailTemplate:
+      type: object
+      required:
+        - subject
+        - body
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+
+    EmailAttachment:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        size:
+          type: string
+
+    EmailRequest:
+      type: object
+      required:
+        - recipient_ids
+        - subject
+        - body
+      properties:
+        recipient_ids:
+          type: array
+          items:
+            type: string
+          description: List of Client IDs to send the email to
+        subject:
+          type: string
+        body:
+          type: string
+        template_id:
+          type: string
+          nullable: true
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailAttachment'
